@@ -4,14 +4,17 @@ import (
 	"go/ast"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
+	"log"
 )
 
-var wgAddAnalyzer = &analysis.Analyzer{
+var WgAddAnalyzer = &analysis.Analyzer{
 	Name: "wgAddAnalyzer",
 	Doc:  "Check if calling WaitGroup.add() in anonymous goroutine",
 	Requires: []*analysis.Analyzer{
 		inspect.Analyzer,
 	},
+	Run: run,
 }
 
 type findWaitAddVisitor struct {
@@ -41,4 +44,38 @@ func isWaitAddNode(node ast.Node) (*ast.Ident, bool) {
 		return ident, ok
 	}
 	return nil, false
+}
+
+func run(pass *analysis.Pass) (interface{}, error) {
+	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+
+	fn := func(node ast.Node) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("recover error")
+			}
+		}()
+
+		gostmt, ok := node.(*ast.GoStmt).Call.Fun.(*ast.FuncLit)
+		if !ok {
+			return
+		}
+		fcv := &findWaitAddVisitor{pass: pass}
+		ast.Walk(fcv, gostmt)
+		for _, ident := range fcv.ident {
+			err := analysis.Diagnostic{
+				Pos:     ident.Pos(),
+				End:     ident.End(),
+				Message: "Variable " + ident.Name + " calls Add() in anonymous goroutine",
+			}
+			pass.Report(err)
+		}
+	}
+
+	nodeFilter := []ast.Node{
+		(*ast.GoStmt)(nil),
+	}
+	inspect.Preorder(nodeFilter, fn)
+
+	return nil, nil
 }

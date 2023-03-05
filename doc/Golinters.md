@@ -25,6 +25,5 @@
 
    例如，对于表达式`foo.bar`，`foo`是`X`，`bar`是`Sel`。
 
-test
-
 [Golang的抽象语法树(AST) Step By Step - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/380421057)
+https://toutiao.io/posts/fzt61t/preview
