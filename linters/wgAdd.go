@@ -4,18 +4,26 @@ import (
 	"go/ast"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/ast/inspector"
+	"honnef.co/go/tools/analysis/code"
+	"honnef.co/go/tools/analysis/facts/generated"
+	"honnef.co/go/tools/pattern"
 	"log"
 )
 
+/*
+*检测思路：只判断go func(){}()，即匿名函数中对sync.WaitGroup.Add()的直接调用
+ */
 var WgAddAnalyzer = &analysis.Analyzer{
 	Name: "wgAddAnalyzer",
-	Doc:  "Check if calling WaitGroup.add() in anonymous goroutine",
+	Doc:  "Check if directly calling WaitGroup.add() in anonymous goroutine",
 	Requires: []*analysis.Analyzer{
 		inspect.Analyzer,
+		generated.Analyzer,
 	},
-	Run: run,
+	Run: wgAddAnalyzerRun,
 }
+
+var wgAddStmt = pattern.MustParse(`(SelectorExpr x (Ident "Add"))`)
 
 type findWaitAddVisitor struct {
 	ident []*ast.Ident
@@ -25,8 +33,10 @@ type findWaitAddVisitor struct {
 func (c *findWaitAddVisitor) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.SelectorExpr:
-		if m, ok := isWaitAddNode(n); ok && c.pass.TypesInfo.TypeOf(m) != nil && c.pass.TypesInfo.TypeOf(m).String() == "sync.WaitGroup" {
-			c.ident = append(c.ident, m)
+		if m, ok := pattern.Match(wgAddStmt, n); ok {
+			if ident, ok := m.State["x"].(*ast.Ident); ok && c.pass.TypesInfo.TypeOf(ident) != nil && c.pass.TypesInfo.TypeOf(ident).String() == "sync.WaitGroup" {
+				c.ident = append(c.ident, ident)
+			}
 		}
 		return c
 	case *ast.GoStmt:
@@ -35,19 +45,7 @@ func (c *findWaitAddVisitor) Visit(node ast.Node) ast.Visitor {
 	return c
 }
 
-/*
-*判断当前的node是否是选择表达式，以及其sel节点的Name是否是“Add”，X.Sel:wg.Add()
- */
-func isWaitAddNode(node ast.Node) (*ast.Ident, bool) {
-	if m, ok := node.(*ast.SelectorExpr); ok && m.Sel.Name == "Add" {
-		ident, ok := m.X.(*ast.Ident)
-		return ident, ok
-	}
-	return nil, false
-}
-
-func run(pass *analysis.Pass) (interface{}, error) {
-	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+func wgAddAnalyzerRun(pass *analysis.Pass) (interface{}, error) {
 
 	fn := func(node ast.Node) {
 		defer func() {
@@ -55,7 +53,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				log.Println("recover error")
 			}
 		}()
-
 		gostmt, ok := node.(*ast.GoStmt).Call.Fun.(*ast.FuncLit)
 		if !ok {
 			return
@@ -72,10 +69,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 	}
 
-	nodeFilter := []ast.Node{
-		(*ast.GoStmt)(nil),
-	}
-	inspect.Preorder(nodeFilter, fn)
-
+	code.Preorder(pass, fn, (*ast.GoStmt)(nil))
 	return nil, nil
 }
