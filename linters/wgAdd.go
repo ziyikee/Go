@@ -6,6 +6,7 @@ import (
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"honnef.co/go/tools/analysis/code"
 	"honnef.co/go/tools/analysis/facts/generated"
+	"honnef.co/go/tools/analysis/report"
 	"honnef.co/go/tools/pattern"
 	"log"
 )
@@ -23,7 +24,7 @@ var WgAddAnalyzer = &analysis.Analyzer{
 	Run: wgAddAnalyzerRun,
 }
 
-var wgAddStmt = pattern.MustParse(`(SelectorExpr x (Ident "Add"))`)
+var wgAddStmt = pattern.MustParse(`(SelectorExpr x (Ident "Add") )`)
 
 type findWaitAddVisitor struct {
 	ident []*ast.Ident
@@ -60,13 +61,9 @@ func wgAddAnalyzerRun(pass *analysis.Pass) (interface{}, error) {
 		fcv := &findWaitAddVisitor{pass: pass}
 		ast.Walk(fcv, gostmt)
 		for _, ident := range fcv.ident {
-			err := analysis.Diagnostic{
-				Pos:     ident.Pos(),
-				End:     ident.End(),
-				Message: "Variable " + ident.Name + " calls Add() in anonymous goroutine",
-			}
-			pass.Report(err)
+			report.Report(pass, ident, "Variable "+ident.Name+" calls `$WG.Add()` in anonymous goroutine")
 		}
+
 	}
 
 	code.Preorder(pass, fn, (*ast.GoStmt)(nil))

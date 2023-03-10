@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	singlechecker.Main(linters.WaitInLoopAnalyzer)
+	singlechecker.Main(linters.HGAnalyzer)
 }

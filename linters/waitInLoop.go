@@ -6,6 +6,7 @@ import (
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
 	"honnef.co/go/tools/analysis/facts/generated"
+	"honnef.co/go/tools/analysis/report"
 	"honnef.co/go/tools/pattern"
 	"log"
 )
@@ -58,20 +59,13 @@ func waitInLoopAnalyzerRun(pass *analysis.Pass) (interface{}, error) {
 			if !ok {
 				continue
 			}
-			//log.Println("find wg: " + targetIdent.Name)
 			//循环内定义的没问题，跳过
 			if _, ok := identsInLoop[targetIdent.Obj]; ok {
-				//log.Println("wg exists in loop: " + targetIdent.Name)
 				continue
 			}
 			for k := j + 1; k < len(stmtListInLoop); k++ {
 				if ident, ok := isFindWaitAfterGoStmt(pass, stmtListInLoop[k], targetIdent); ok {
-					err := analysis.Diagnostic{
-						Pos:     ident.Pos(),
-						End:     ident.End(),
-						Message: "Variable " + ident.Name + " calls `$WG.Wait()` inside a loop may block the call to `$WG.Done()`",
-					}
-					pass.Report(err)
+					report.Report(pass, ident, "Variable "+ident.Name+" calls `$WG.Wait()` inside a loop may block the call to `$WG.Done()`")
 				}
 			}
 
@@ -81,7 +75,6 @@ func waitInLoopAnalyzerRun(pass *analysis.Pass) (interface{}, error) {
 		(*ast.ForStmt)(nil),
 		(*ast.RangeStmt)(nil),
 	}
-	//code.Preorder(pass, fn, (*ast.FuncDecl)(nil))
 	pass.ResultOf[inspect.Analyzer].(*inspector.Inspector).Preorder(nodeFilter, fn)
 	return nil, nil
 }

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -32,4 +33,10 @@ func test1() {
 	fmt.Println("Wait ...")
 	wg1.Wait()
 	fmt.Println(atomic.LoadInt32(&x))
+}
+func test1_3(errorCh chan error) {
+
+	go func() {
+		errorCh <- errors.New("aaa")
+	}()
 }

@@ -11,42 +11,32 @@ import (
 var srcCode = `
 package test
 
-import (
-	"fmt"
-	"sync"
-)
+func example() {
+	var ch1 = make(chan string)
+	ch2 := make(chan string)
+	var ch3 = make(chan string, 1)
+	ch4 := make(chan string, 1)
 
-func main2() {
-	test2()
-}
-
-func test2() {
-	// ruleid: waitgroup-add-called-inside-goroutine
-	var wg1 sync.WaitGroup
-	var wg2 sync.WaitGroup
-	wg3 := sync.WaitGroup{}
-	wg3.Wait()
-	wg1.Add(1)
-	for i := 0; i < 100; i++ {
-		go func() {
-			wg1.Add(1)
-			go func() {
-				return
-			}()
-			wg1.Done()
-			addCall(wg2)
-		}()
+	go func() {
+		str := "aaa"
+		ch1 <- str
+		ch2 <- str
+		ch3 <- str
+		ch4 <- str
+	}()
+	a := 1
+	select {
+	case <-ch1:
+		a++
+	case b := <-ch2:
+		a = len(b)
 	}
-
-	fmt.Println("Wait ...")
-	wg1.Wait()
-}
-
-func addCall(wg2 sync.WaitGroup) {
-	wg2.Add(1)
 }
 `
 
+/*
+*打印AST树
+ */
 func Test(t *testing.T) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "", srcCode, 0)

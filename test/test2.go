@@ -16,6 +16,7 @@ func test2() {
 	wg3 := sync.WaitGroup{}
 	wg3.Wait()
 	wg1.Add(1)
+	var list = []int{1, 2, 3, 4, 5}
 	for i := 0; i < 100; i++ {
 		go func() {
 			wg1.Add(1)
@@ -30,6 +31,14 @@ func test2() {
 			wg2.Add(1)
 			addCall(wg2)
 		}()
+	}
+
+	for i := 0; i < 100; i++ {
+
+	}
+
+	for _, i := range list {
+		i++
 	}
 
 	fmt.Println("Wait ...")
