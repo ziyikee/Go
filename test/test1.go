@@ -7,10 +7,6 @@ import (
 	"sync/atomic"
 )
 
-func main() {
-	test1()
-}
-
 func test1() {
 	// ruleid: waitgroup-add-called-inside-goroutine
 	var wg1 sync.WaitGroup

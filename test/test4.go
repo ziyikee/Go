@@ -2,20 +2,12 @@ package test
 
 import (
 	"fmt"
-	"runtime"
 	"time"
 )
 
 var (
 	result = ""
 )
-
-func main() {
-	req1(1)
-	time.Sleep(time.Second * 5)
-	fmt.Println(result)
-	fmt.Println(runtime.NumGoroutine())
-}
 
 func req1(timeout time.Duration) string {
 	ch1 := make(chan string)

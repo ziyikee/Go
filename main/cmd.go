@@ -6,5 +6,6 @@ import (
 )
 
 func main() {
-	singlechecker.Main(linters.HGAnalyzer)
+	singlechecker.Main(linters.PassMutexByValueAnalyzer)
+	//multichecker.Main(linters.HGAnalyzer, linters.WgAddAnalyzer, linters.WaitInLoopAnalyzer, linters.ClosureErrAnalyzer)
 }

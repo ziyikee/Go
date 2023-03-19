@@ -39,7 +39,7 @@ func example() {
  */
 func Test(t *testing.T) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "", srcCode, 0)
+	f, err := parser.ParseFile(fset, "D:\\Projects\\GoLint\\doc\\PassMutexByValue.go", nil, 0)
 	if err != nil {
 		fmt.Printf("err = %s", err)
 	}

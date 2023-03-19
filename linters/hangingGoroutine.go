@@ -1,7 +1,6 @@
 package linters
 
 import (
-	"fmt"
 	"go/ast"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -9,6 +8,7 @@ import (
 	"honnef.co/go/tools/analysis/facts/generated"
 	"honnef.co/go/tools/analysis/report"
 	"honnef.co/go/tools/pattern"
+	"log"
 )
 
 var HGAnalyzer = &analysis.Analyzer{
@@ -39,7 +39,6 @@ func (c *findSendStmtVisitor) Visit(node ast.Node) ast.Visitor {
 		return c
 	}
 	if ident, ok := sendStmt.Chan.(*ast.Ident); ok && checkUnbuffered(ident) { // 有sendstmt，且该channel创建时为无缓冲状态
-		fmt.Println(ident.Name)
 		c.ident = append(c.ident, ident)
 	}
 	return c
@@ -69,12 +68,10 @@ func isUnbuffered(ident *ast.Ident) bool {
 	}
 	switch Obj.Decl.(type) {
 	case *ast.AssignStmt:
-
 		if _, ok := pattern.Match(channelCheck, ident.Obj.Decl.(*ast.AssignStmt).Rhs[0]); ok {
 			return true
 		}
 	case *ast.ValueSpec:
-		fmt.Println(ident.Name)
 		if _, ok := pattern.Match(channelCheck, ident.Obj.Decl.(*ast.ValueSpec)); ok {
 			return true
 		}
@@ -155,11 +152,11 @@ func hangingGoroutineRun(pass *analysis.Pass) (interface{}, error) {
 
 	fn := func(node ast.Node) {
 
-		//defer func() {
-		//	if err := recover(); err != nil {
-		//		log.Println("recover error")
-		//	}
-		//}()
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("recover error")
+			}
+		}()
 
 		switch typedNode := node.(type) {
 
